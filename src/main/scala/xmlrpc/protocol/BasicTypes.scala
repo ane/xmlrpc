@@ -104,6 +104,7 @@ trait BasicTypes extends Protocol {
       from \\ "value" headOption match {
         case Some(<value><string>{content}</string></value>) => decodeSpecialCharacters(content.text).success
         case Some(<value>{content}</value>) => decodeSpecialCharacters(content.text).success
+        case Some(<value/>) => "".success
         case _ => s"Expected string structure in $from".toError.failures
       }
     }
