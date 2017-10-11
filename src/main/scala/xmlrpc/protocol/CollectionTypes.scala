@@ -15,14 +15,15 @@ trait CollectionTypes extends Protocol {
     override def serialize(value: Seq[T]): Node =
       <array><data>{for {elem <- value} yield toXmlrpc(elem)}</data></array>.inValue
 
-    override def deserialize(from: NodeSeq): Deserialized[Seq[T]] =
-      from \\ "array" headOption match {
-        case Some(<array><data>{array @ _*}</data></array>) =>
-          (for { value <- array}
+    override def deserialize(from: NodeSeq): Deserialized[Seq[T]] = {
+      val trimmed = from.map(scala.xml.Utility.trim)
+      trimmed \\ "array" headOption match {
+        case Some(<array><data>{array@_*}</data></array>) => (for {value <- array}
             yield fromXmlrpc[T](value)).toList.sequence[Deserialized, T]
 
         case _ => "Expected array structure in $from".toError.failures
       }
+    }
   }
 
   implicit def StructXmlrpc[T: Datatype]: Datatype[Map[String, T]] = new Datatype[Map[String, T]] {
@@ -37,10 +38,11 @@ trait CollectionTypes extends Protocol {
       <struct>{struct}</struct>.inValue
     }
 
-    override def deserialize(from: NodeSeq): Deserialized[Map[String, T]] =
-      from \\ "struct" headOption match {
-        case Some(<struct>{members @ _*}</struct>) =>
-          (for { member <- members }
+    override def deserialize(from: NodeSeq): Deserialized[Map[String, T]] = {
+      val trimmed = from.map(scala.xml.Utility.trim)
+      trimmed \\ "struct" headOption match {
+        case Some(<struct>{members@_*}</struct>) =>
+          (for {member <- members}
             yield fromXmlrpc[T](member \ "value" head) map ((member \ "name" text) -> _))
             .toList
             .sequence[Deserialized, (String, T)]
@@ -48,5 +50,6 @@ trait CollectionTypes extends Protocol {
 
         case _ => s"Expected struct in:\n$from".toError.failures
       }
+    }
   }
 }
